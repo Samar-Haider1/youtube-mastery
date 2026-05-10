@@ -23,11 +23,13 @@ function loadFromSession(): { state: PipelineState; index: number } {
 export function usePipeline() {
   const [state, setState] = useState<PipelineState>(EMPTY_PIPELINE_STATE);
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     const { state: saved, index } = loadFromSession();
     setState(saved);
     setCurrentStageIndex(index);
+    setHydrated(true);
   }, []);
 
   const persist = useCallback((newState: PipelineState, newIndex: number) => {
@@ -88,6 +90,7 @@ export function usePipeline() {
 
   return {
     state,
+    hydrated,
     currentStageIndex,
     currentStage,
     isFirstStage,

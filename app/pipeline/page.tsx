@@ -12,16 +12,16 @@ import type { ApiRoutePayload, StageKey } from '@/lib/types';
 export default function PipelinePage() {
   const router = useRouter();
   const pipeline = usePipeline();
-  const { state, currentStageIndex, currentStage, isFirstStage, isLastStage } = pipeline;
+  const { state, hydrated, currentStageIndex, currentStage, isFirstStage, isLastStage } = pipeline;
 
   const [completion, setCompletion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Redirect to home if no topic set
+  // Only redirect after sessionStorage has hydrated — avoids race condition
   useEffect(() => {
-    if (!state.topic) router.push('/');
-  }, [state.topic, router]);
+    if (hydrated && !state.topic) router.push('/');
+  }, [hydrated, state.topic, router]);
 
   const complete = useCallback(
     async (promptJson: string, apiRoute: string) => {
@@ -114,6 +114,7 @@ export default function PipelinePage() {
       ? 'hook-select'
       : 'text';
 
+  if (!hydrated) return <div className="min-h-screen bg-gray-950" />;
   if (!state.topic) return null;
 
   return (
