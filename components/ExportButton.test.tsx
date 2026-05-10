@@ -1,8 +1,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ExportButton } from './ExportButton';
-import type { PipelineState } from '../lib/types';
+import type { PipelineState } from '@/lib/types';
 
-jest.mock('../lib/export', () => ({
+jest.mock('@/lib/export', () => ({
   downloadZip: jest.fn().mockResolvedValue(undefined),
 }));
 

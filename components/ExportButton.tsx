@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { downloadZip } from '../lib/export';
-import type { PipelineState } from '../lib/types';
+import { downloadZip } from '@/lib/export';
+import type { PipelineState } from '@/lib/types';
 
 interface ExportButtonProps {
   state: PipelineState;
