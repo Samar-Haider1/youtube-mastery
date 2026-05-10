@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"d:/Claude/YT/Video Gen/docs/superpowers/specs\")",
+      "Bash(npx jest *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git init *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(Select-String -Pattern '\"version\"')"
+    ],
+    "additionalDirectories": [
+      "d:\\Claude\\YT\\Video Gen\\docs\\superpowers"
+    ]
+  }
+}
