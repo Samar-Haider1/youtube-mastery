@@ -1,65 +1,105 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import type { Tone, VideoLength } from '@/lib/types';
+import { EMPTY_PIPELINE_STATE } from '@/lib/types';
+
+const TONES: Tone[] = ['dramatic', 'educational', 'thriller', 'documentary'];
+const LENGTHS: { value: VideoLength; label: string }[] = [
+  { value: '5-8min', label: '5-8 min (~800 words)' },
+  { value: '10-15min', label: '10-15 min (~1500 words)' },
+  { value: '20min+', label: '20+ min (~3500 words)' },
+];
+
+export default function LandingPage() {
+  const router = useRouter();
+  const [topic, setTopic] = useState('');
+  const [tone, setTone] = useState<Tone>('dramatic');
+  const [length, setLength] = useState<VideoLength>('10-15min');
+
+  const handleStart = () => {
+    if (!topic.trim()) return;
+    const state = { ...EMPTY_PIPELINE_STATE, topic: topic.trim(), tone, length };
+    sessionStorage.setItem('yt-pipeline-state', JSON.stringify(state));
+    sessionStorage.setItem('yt-pipeline-index', '0');
+    router.push('/pipeline');
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-screen flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-xl space-y-8">
+        <div className="text-center space-y-2">
+          <h1 className="text-4xl font-black text-white tracking-tight">
+            History Channel <span className="text-red-500">Pipeline</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+          <p className="text-gray-400">Generate a full video package in 10 AI-powered steps</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+        <div className="bg-gray-900 rounded-2xl border border-gray-800 p-6 space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-300">Video Topic</label>
+            <input
+              type="text"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleStart()}
+              placeholder="e.g. The Fall of the Roman Empire"
+              className="w-full bg-gray-950 text-white rounded-lg px-4 py-3 border border-gray-700 focus:border-red-500 focus:outline-none placeholder-gray-600"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-300">Channel Tone</label>
+            <div className="grid grid-cols-2 gap-2">
+              {TONES.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTone(t)}
+                  className={`py-2 rounded-lg text-sm font-medium capitalize transition-colors ${
+                    tone === t
+                      ? 'bg-red-600 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-300">Video Length</label>
+            <div className="space-y-2">
+              {LENGTHS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => setLength(value)}
+                  className={`w-full py-2 px-4 rounded-lg text-sm text-left transition-colors ${
+                    length === value
+                      ? 'bg-red-600 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={handleStart}
+            disabled={!topic.trim()}
+            className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Documentation
-          </a>
+            Start Pipeline
+          </button>
         </div>
-      </main>
-    </div>
+
+        <p className="text-center text-xs text-gray-600">
+          Powered by Claude claude-sonnet-4-6 · Free DuckDuckGo research · ~$0.01-0.05 per run
+        </p>
+      </div>
+    </main>
   );
 }
