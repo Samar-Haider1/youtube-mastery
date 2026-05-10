@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePipeline } from '@/hooks/usePipeline';
 import { StageNav } from '@/components/StageNav';
@@ -73,28 +73,28 @@ export default function PipelinePage() {
     [currentStage.key]
   );
 
-  // Auto-trigger generation when entering a stage with no output
-  const triggerGeneration = useCallback(() => {
-    const hasOutput = !!state.stages[currentStage.key as StageKey];
-    if (!hasOutput && !isLoading) {
-      const payload: ApiRoutePayload = {
-        topic: state.topic,
-        tone: state.tone,
-        length: state.length,
-        stages: state.stages as Record<StageKey, string>,
-        selectedAngle: state.selectedAngle,
-        selectedHook: state.selectedHook,
-      };
-      complete(JSON.stringify(payload), currentStage.apiRoute);
-    } else if (hasOutput) {
-      setCompletion(state.stages[currentStage.key as StageKey] ?? '');
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStageIndex]);
-
+  // Auto-trigger generation when entering a stage with no output.
+  // Depends on both currentStageIndex AND hydrated so it fires once sessionStorage loads.
   useEffect(() => {
-    triggerGeneration();
-  }, [triggerGeneration]);
+    if (!hydrated || !state.topic) return;
+    const key = currentStage.key as StageKey;
+    const hasOutput = !!state.stages[key];
+    if (hasOutput) {
+      setCompletion(state.stages[key] ?? '');
+      return;
+    }
+    if (isLoading) return;
+    const payload: ApiRoutePayload = {
+      topic: state.topic,
+      tone: state.tone,
+      length: state.length,
+      stages: state.stages as Record<StageKey, string>,
+      selectedAngle: state.selectedAngle,
+      selectedHook: state.selectedHook,
+    };
+    complete(JSON.stringify(payload), currentStage.apiRoute);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStageIndex, hydrated]);
 
   const displayContent = state.stages[currentStage.key as StageKey] ?? completion;
 
