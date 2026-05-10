@@ -16,6 +16,7 @@ export default function PipelinePage() {
 
   const [completion, setCompletion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Only redirect after sessionStorage has hydrated — avoids race condition
@@ -25,7 +26,6 @@ export default function PipelinePage() {
 
   const complete = useCallback(
     async (promptJson: string, apiRoute: string) => {
-      // Abort any in-flight request
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -34,6 +34,7 @@ export default function PipelinePage() {
 
       setIsLoading(true);
       setCompletion('');
+      setError(null);
 
       try {
         const res = await fetch(apiRoute, {
@@ -44,6 +45,7 @@ export default function PipelinePage() {
         });
 
         if (!res.ok || !res.body) {
+          setError('Generation failed. Click Retry to try again.');
           setIsLoading(false);
           return;
         }
@@ -55,15 +57,18 @@ export default function PipelinePage() {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          accumulated += chunk;
+          accumulated += decoder.decode(value, { stream: true });
           setCompletion(accumulated);
         }
+        accumulated += decoder.decode(); // flush remaining bytes
 
-        pipeline.setStageOutput(currentStage.key as StageKey, accumulated);
+        const trimmed = accumulated.trim();
+        setCompletion(trimmed);
+        pipeline.setStageOutput(currentStage.key as StageKey, trimmed);
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
           console.error('Streaming error:', err);
+          setError('Connection error. Click Retry to try again.');
         }
       } finally {
         setIsLoading(false);
@@ -73,9 +78,23 @@ export default function PipelinePage() {
     [currentStage.key]
   );
 
+  const buildPayload = useCallback((): ApiRoutePayload => ({
+    topic: state.topic,
+    tone: state.tone,
+    length: state.length,
+    stages: state.stages as Record<StageKey, string>,
+    selectedAngle: state.selectedAngle,
+    selectedHook: state.selectedHook,
+  }), [state]);
+
+  const handleRetry = useCallback(() => {
+    setError(null);
+    complete(JSON.stringify(buildPayload()), currentStage.apiRoute);
+  }, [buildPayload, complete, currentStage.apiRoute]);
+
   // Auto-trigger generation when entering a stage with no output.
-  // Depends on both currentStageIndex AND hydrated so it fires once sessionStorage loads.
   useEffect(() => {
+    setCompletion(''); // clear stale content immediately on stage change
     if (!hydrated || !state.topic) return;
     const key = currentStage.key as StageKey;
     const hasOutput = !!state.stages[key];
@@ -84,15 +103,7 @@ export default function PipelinePage() {
       return;
     }
     if (isLoading) return;
-    const payload: ApiRoutePayload = {
-      topic: state.topic,
-      tone: state.tone,
-      length: state.length,
-      stages: state.stages as Record<StageKey, string>,
-      selectedAngle: state.selectedAngle,
-      selectedHook: state.selectedHook,
-    };
-    complete(JSON.stringify(payload), currentStage.apiRoute);
+    complete(JSON.stringify(buildPayload()), currentStage.apiRoute);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStageIndex, hydrated]);
 
@@ -153,6 +164,8 @@ export default function PipelinePage() {
         selectedHook={state.selectedHook}
         onSelectAngle={pipeline.setSelectedAngle}
         onSelectHook={pipeline.setSelectedHook}
+        error={error}
+        onRetry={handleRetry}
       />
 
       {isLastStage && !isLoading && (

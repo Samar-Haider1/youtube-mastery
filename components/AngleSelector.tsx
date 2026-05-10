@@ -7,7 +7,10 @@ interface Angle {
 }
 
 function parseAngles(content: string): Angle[] {
-  const blocks = content.split(/ANGLE\s*\[(\d+)\]:/i).slice(1);
+  // Strip markdown bold markers before parsing
+  const cleaned = content.replace(/\*\*/g, '').replace(/\*/g, '');
+
+  const blocks = cleaned.split(/ANGLE\s*\[(\d+)\]:/i).slice(1);
   const angles: Angle[] = [];
   for (let i = 0; i < blocks.length; i += 2) {
     const number = parseInt(blocks[i], 10);
@@ -15,7 +18,19 @@ function parseAngles(content: string): Angle[] {
     const titleMatch = raw.match(/^([^\n]+)/);
     angles.push({ number, title: titleMatch?.[1]?.trim() ?? `Angle ${number}`, raw });
   }
-  return angles;
+
+  if (angles.length > 0) return angles;
+
+  // Fallback: numbered list "1. ..." or "1) ..."
+  const lines = cleaned.match(/^\s*\d+[.)]\s+.+/gm);
+  if (lines && lines.length > 0) {
+    return lines.map((line, idx) => {
+      const raw = line.replace(/^\s*\d+[.)]\s+/, '').trim();
+      return { number: idx + 1, title: raw.slice(0, 80), raw };
+    });
+  }
+
+  return [];
 }
 
 interface AngleSelectorProps {
@@ -26,7 +41,15 @@ interface AngleSelectorProps {
 
 export function AngleSelector({ content, selectedAngle, onSelect }: AngleSelectorProps) {
   const angles = parseAngles(content);
-  if (angles.length === 0) return <pre className="text-gray-300 whitespace-pre-wrap text-sm">{content}</pre>;
+
+  // Auto-select raw content so Next Stage is never blocked when parsing yields nothing
+  if (angles.length === 0) {
+    if (content && !selectedAngle) {
+      // Defer selection to avoid state update during render
+      setTimeout(() => onSelect(content), 0);
+    }
+    return <pre className="text-gray-300 whitespace-pre-wrap text-sm">{content}</pre>;
+  }
 
   return (
     <div className="space-y-3">

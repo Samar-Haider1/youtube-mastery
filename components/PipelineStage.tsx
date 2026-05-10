@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { AngleSelector } from './AngleSelector';
 import { HookSelector } from './HookSelector';
 
@@ -20,6 +20,8 @@ interface PipelineStageProps {
   selectedHook?: string;
   onSelectAngle?: (angle: string) => void;
   onSelectHook?: (hook: string) => void;
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 export function PipelineStage({
@@ -38,8 +40,11 @@ export function PipelineStage({
   selectedHook = '',
   onSelectAngle,
   onSelectHook,
+  error,
+  onRetry,
 }: PipelineStageProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
 
   useEffect(() => {
     if (!isStreaming && textareaRef.current) {
@@ -50,13 +55,23 @@ export function PipelineStage({
 
   const canProceed =
     !isStreaming &&
+    !error &&
     (stageType === 'text' ||
       (stageType === 'angle-select' && selectedAngle) ||
       (stageType === 'hook-select' && selectedHook));
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(editedContent);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(editedContent);
+      setCopyStatus('copied');
+      setTimeout(() => setCopyStatus('idle'), 2000);
+    } catch {
+      setCopyStatus('error');
+      setTimeout(() => setCopyStatus('idle'), 3000);
+    }
   };
+
+  const copyLabel = copyStatus === 'copied' ? 'Copied!' : copyStatus === 'error' ? 'Copy failed' : 'Copy';
 
   return (
     <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 space-y-4">
@@ -64,6 +79,20 @@ export function PipelineStage({
         <h2 className="text-xl font-bold text-white">{title}</h2>
         <p className="text-sm text-gray-400">{description}</p>
       </div>
+
+      {error && (
+        <div className="rounded-lg bg-red-900/40 border border-red-700 p-3 flex items-center justify-between">
+          <span className="text-red-300 text-sm">{error}</span>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="text-sm px-3 py-1 bg-red-700 hover:bg-red-600 text-white rounded transition-colors"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      )}
 
       {isStreaming ? (
         <div className="bg-gray-950 rounded-lg p-4 min-h-32 text-gray-300 text-sm whitespace-pre-wrap font-mono">
@@ -94,11 +123,11 @@ export function PipelineStage({
             </button>
           )}
           <button
-            onClick={copyToClipboard}
+            onClick={handleCopy}
             disabled={isStreaming}
             className="px-4 py-2 text-sm text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg transition-colors disabled:opacity-40"
           >
-            Copy
+            {copyLabel}
           </button>
         </div>
         <button

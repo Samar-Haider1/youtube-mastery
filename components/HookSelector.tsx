@@ -7,7 +7,10 @@ interface Hook {
 }
 
 function parseHooks(content: string): Hook[] {
-  const blocks = content.split(/HOOK\s+(\d+):/i).slice(1);
+  // Strip markdown bold markers before parsing
+  const cleaned = content.replace(/\*\*/g, '').replace(/\*/g, '');
+
+  const blocks = cleaned.split(/HOOK\s+(\d+):/i).slice(1);
   const hooks: Hook[] = [];
   for (let i = 0; i < blocks.length; i += 2) {
     const number = parseInt(blocks[i], 10);
@@ -15,7 +18,20 @@ function parseHooks(content: string): Hook[] {
     const preview = raw.slice(0, 120) + (raw.length > 120 ? '…' : '');
     hooks.push({ number, preview, raw });
   }
-  return hooks;
+
+  if (hooks.length > 0) return hooks;
+
+  // Fallback: numbered list "1. ..." or "1) ..."
+  const lines = cleaned.match(/^\s*\d+[.)]\s+.+/gm);
+  if (lines && lines.length > 0) {
+    return lines.map((line, idx) => {
+      const raw = line.replace(/^\s*\d+[.)]\s+/, '').trim();
+      const preview = raw.slice(0, 120) + (raw.length > 120 ? '…' : '');
+      return { number: idx + 1, preview, raw };
+    });
+  }
+
+  return [];
 }
 
 interface HookSelectorProps {
@@ -26,7 +42,14 @@ interface HookSelectorProps {
 
 export function HookSelector({ content, selectedHook, onSelect }: HookSelectorProps) {
   const hooks = parseHooks(content);
-  if (hooks.length === 0) return <pre className="text-gray-300 whitespace-pre-wrap text-sm">{content}</pre>;
+
+  // Auto-select raw content so Next Stage is never blocked when parsing yields nothing
+  if (hooks.length === 0) {
+    if (content && !selectedHook) {
+      setTimeout(() => onSelect(content), 0);
+    }
+    return <pre className="text-gray-300 whitespace-pre-wrap text-sm">{content}</pre>;
+  }
 
   return (
     <div className="space-y-3">
