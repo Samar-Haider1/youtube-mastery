@@ -2,11 +2,12 @@ import type { Tone, VideoLength, ApiRoutePayload } from './types';
 
 export function createAnthropicClient() {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { createAnthropic } = require('@ai-sdk/anthropic');
-  return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+  const { createOllama } = require('ollama-ai-provider');
+  const baseURL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+  return createOllama({ baseURL });
 }
 
-export const MODEL = 'claude-sonnet-4-6';
+export const MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
 
 export function buildSystemPrompt(tone: Tone, length: VideoLength): string {
   return `You are a viral history YouTube content creator writing for a faceless channel.
